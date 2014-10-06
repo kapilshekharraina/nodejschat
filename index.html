@@ -1,0 +1,206 @@
+<html>
+	<head>
+		
+
+		<title>IRC CHAT</title>
+	
+		<style>
+			.main-content
+			{
+				
+				background-image: url('images/bg.png');
+				width: 55%;
+				margin-left: 20%;
+				font-family: Vrinda;
+				border-color: #F6CECE;
+   				border-style: solid;
+   				border-width: 1px;
+			}
+			h3{
+				color: #FE2E2E;
+				margin-left: 15%;
+			}
+			h1{
+				margin-left: 15%;
+				color: #CEF6F5;
+			}
+			.messagesSection{
+				width: 70%;
+  				height: 60%;
+   				overflow: scroll;
+   				font-size: 14px;
+   				float: left;
+   				background-color: #FFFFFF;
+   				margin-left: 2%;
+			}
+			.usersSection{
+				width: 20%;
+  				height: 60%;
+   				overflow: scroll;
+   				font-size: 14px;
+   				float: left;
+   				border-color: gray;
+   				border-style: solid;
+   				border-width: 1px;
+   				background-color: #0B3B2E;
+   				color: #ffffff;
+			}
+			.userList{
+				margin-left: 15%;
+				color: #CEF6F5;
+			}
+			.filler{
+				width: 1%;
+  				height: 60%;
+   				float: left;
+			}
+			.inputText{
+				width: 70%;
+				margin-left: 2%;
+				height: 10%;
+			}
+			input:focus{
+				background-color:#F5F6CE;
+			}
+			.showUser{
+				background: chartreuse;
+			}
+			.tslbl{
+				width: 5%;
+			}
+			.msglbl{
+				width: 95%;
+
+			}
+		</style>
+	</head>
+	<body>
+
+		<div class="main-content">
+			<h1> Welcome to IMRC Chat </h1>
+			<h3> Chat Rooms available : 
+			<select id="rooms">
+			  <option value="Public" Selected>Public</option>	
+			  <option value="Techology">Techology</option>
+			  <option value="Leisure">Leisure</option>
+			  <option value="Politics">Politics</option>
+			  <option value="Sports">Sports</option>
+			</select>
+
+			<input type="button" value="Change Room" id="changeroom"/> as <label id='showUser' class="showUser"></label>
+			</h3>
+			<hr/>
+			<input type="hidden" id="username" class="inputText"/>
+			<br/><br/>
+			<div>
+				<div id="messages" class="messagesSection">
+					<table id="messagestore">
+						</table>
+				</div>
+				<div lass="filler">
+				</div>
+				<div id="users" class="usersSection">USERS IN ROOM</div>
+			<div>
+
+			<br/>
+			<input type="text" id="input" class="inputText" /> 
+			<br/><small> Default room is public.Press enter to send message</small>
+		</div>	
+			
+
+
+		<script src="socket.io/socket.io.js"></script>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+		<script>
+		$(document).ready(function(){
+
+			$("#changeroom").click(function(){
+
+				changeRoom();
+
+			})
+			var socket = io.connect('http://chai.mybluemix.net/');
+			//alert(socket);
+			socket.on('serverMessage', function(content)
+			{
+				addMessage(content);
+				var messagesElementS = document.getElementById('messages');
+				messagesElementS.scrollTop = messagesElementS.scrollHeight;
+			});
+			socket.on('login', function()
+			{
+				var username = prompt('What username would you like to use?');
+				var userElement = document.getElementById('username');
+				userElement.value=username;
+				document.getElementById('showUser').innerHTML = username;
+				
+				changeRoom();
+				
+			});
+	
+			socket.on('serverMessageuserLeft', function(data)
+			{
+				var id=data.id;
+				//alert(id);
+				$("#"+id).remove();
+			});
+			socket.on('serverMessageuserJoined', function(data)
+			{
+				//alert("Joining")
+				$("#users").append("<p class='userList' id='"+data.id+"'>"+data.name+"</p>");
+			});
+
+			socket.on('serverMessageroomUsers', function(data)
+			{
+				$("#users").empty();
+				for(var i=0;i<data.length;i++)
+				{
+					$("#users").append("<p class='userList' id='"+data[i].id+"'>"+data[i].name+"</p>");
+					
+				}
+				
+			});
+
+			var messagesElement = document.getElementById('messages');
+			
+
+			function changeRoom() {
+				var userElement = document.getElementById('username');
+				var username = userElement.value;
+				var roomElement = document.getElementById('rooms');
+				var room = roomElement.value
+				socket.emit('login', JSON.stringify({'username':username,'room':room}));
+			}
+
+			function addMessage(message) {
+				var newMessageText ="<small>   ["+getFormattedDate()+"]</small>";
+
+				$("#messagestore").append("<tr><td class='msglbl'>"+message+"</td><td class='tslbl'>"+newMessageText+"</td></tr>");
+				
+				
+			}
+			function getFormattedDate()
+			{
+				var date = new Date();
+				return date.getHours()+":"+date.getMinutes()+":"+date.getSeconds()
+			}
+
+			var inputElement = document.getElementById('input');
+			inputElement.onkeydown = function(keyboardEvent)
+			{
+				if (keyboardEvent.keyCode === 13)
+				{
+					
+					socket.emit('clientMessage', inputElement.value);
+					inputElement.value = '';
+				} 
+				else
+				{
+					return true;
+				}
+			};
+		});
+		</script>
+
+	</body>
+</html>
